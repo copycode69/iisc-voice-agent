@@ -1,30 +1,63 @@
 {
   "expo": {
-    "name": "_vaani_scaffold",
-    "slug": "_vaani_scaffold",
+    "name": "Vaani",
+    "slug": "vaani",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0E1116"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.iisc.vaani",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Vaani transcribes your speech on this phone. Audio is not uploaded.",
+        "NSCalendarsUsageDescription": "Vaani reads your schedule and creates reminder events.",
+        "NSCalendarsFullAccessUsageDescription": "Vaani reads your schedule and creates reminder events."
+      }
     },
     "android": {
+      "package": "com.iisc.vaani",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0E1116"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR",
+        "com.android.alarm.permission.SET_ALARM"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 24,
+            "buildArchs": ["arm64-v8a"]
+          }
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Vaani reads your schedule and creates reminder events."
+        }
+      ],
+      "@kesha-antonov/react-native-background-downloader"
+    ]
   }
 }
