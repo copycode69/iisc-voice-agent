@@ -39,3 +39,18 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# release APKs are attached to a GitHub release, not committed
+/release/
+*.apk
+
+# secrets
+.env
+.env.*
+
+# assignment notes kept on this PC, not in the repo
+CURSOR_PROMPT.md
+FIX_PROMPT.md
+AGENTS.md
+CLAUDE.md
+.claude/
