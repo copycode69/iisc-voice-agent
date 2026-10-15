@@ -8,13 +8,14 @@ import { GEMINI_MODELS, GROQ_MODELS, loadApiKey, saveApiKey, type HinglishScript
 export function SettingsScreen(props: { onBack: () => void }) {
   const { settings, setSettings } = useVaani();
   const [key, setKey] = useState('');
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     loadApiKey(settings.provider).then(setKey).catch(() => setKey(''));
   }, [settings.provider]);
 
   const saveKey = () => {
-    void saveApiKey(settings.provider, key);
+    void saveApiKey(settings.provider, key).then(() => setSaved(true));
   };
 
   return (
@@ -31,15 +32,21 @@ export function SettingsScreen(props: { onBack: () => void }) {
       <Text style={styles.label}>API key, stored on this phone</Text>
       <TextInput
         value={key}
-        onChangeText={setKey}
+        onChangeText={(value) => {
+          setSaved(false);
+          setKey(value);
+        }}
         onEndEditing={saveKey}
         secureTextEntry
         autoCapitalize="none"
         autoCorrect={false}
-        placeholder="Paste key, then leave the field"
+        placeholder="Paste the Groq key"
         placeholderTextColor={theme.muted}
         style={styles.input}
       />
+      <Pressable onPress={saveKey} style={[styles.chip, saved && styles.chipOn]}>
+        <Text style={styles.chipText}>{saved ? 'Key saved on this phone' : 'Save key'}</Text>
+      </Pressable>
       <Text style={styles.label}>Model</Text>
       <View style={styles.row}>
         {(settings.provider === 'groq' ? GROQ_MODELS : GEMINI_MODELS).map((model) => {

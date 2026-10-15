@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useVaani, type Phase } from '../state/VaaniProvider';
 import { theme } from '../ui/theme';
@@ -5,14 +6,23 @@ import type { LangMode } from '../settings/store';
 
 const PHASE_LABEL: Record<Phase, string> = {
   idle: 'Tap to talk',
-  listening: 'Listening',
-  transcribing: 'Transcribing on device',
+  listening: 'Send',
+  transcribing: 'Working on your words…',
   thinking: 'Thinking',
   speaking: 'Speaking',
 };
 
 export function MainScreen(props: { open: (screen: string) => void }) {
   const vaani = useVaani();
+  const [waitSec, setWaitSec] = useState(0);
+  useEffect(() => {
+    if (vaani.phase !== 'transcribing') {
+      setWaitSec(0);
+      return;
+    }
+    const id = setInterval(() => setWaitSec((seconds) => seconds + 1), 1000);
+    return () => clearInterval(id);
+  }, [vaani.phase]);
   return (
     <View style={styles.root}>
       <View style={styles.top}>
@@ -52,8 +62,17 @@ export function MainScreen(props: { open: (screen: string) => void }) {
       <View style={styles.meterTrack}>
         <View style={[styles.meter, { width: `${Math.max(8, vaani.level * 100)}%` }]} />
       </View>
+      <Text style={styles.listenHint}>
+        {vaani.phase === 'listening'
+          ? 'Say your question, then tap Send.'
+          : vaani.phase === 'transcribing'
+            ? 'Please wait on this screen. Speech stays on the phone.'
+            : 'Tap to talk. Then tap Send to get an answer.'}
+      </Text>
       <Pressable onPress={() => void vaani.toggleMic()} style={[styles.mic, vaani.phase !== 'idle' && styles.micOn]}>
-        <Text style={styles.micText}>{PHASE_LABEL[vaani.phase]}</Text>
+        <Text style={styles.micText}>
+          {vaani.phase === 'transcribing' ? `Working… ${waitSec}s` : PHASE_LABEL[vaani.phase]}
+        </Text>
       </Pressable>
       <Pressable onPress={() => void vaani.sayTestLines()} style={styles.test}>
         <Text style={styles.testText}>Say test lines</Text>
@@ -92,6 +111,7 @@ const styles = StyleSheet.create({
   error: { color: theme.danger, fontFamily: theme.font, marginTop: 8 },
   meterTrack: { height: 6, backgroundColor: theme.card, borderRadius: 99, overflow: 'hidden', marginBottom: 12 },
   meter: { height: 6, backgroundColor: theme.accent },
+  listenHint: { color: theme.muted, fontFamily: theme.font, fontSize: 13, textAlign: 'center', marginBottom: 8 },
   mic: { backgroundColor: theme.accent, minHeight: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center' },
   micOn: { backgroundColor: '#6E8BFF' },
   micText: { color: '#0E1116', fontFamily: theme.fontBold, fontSize: 18 },

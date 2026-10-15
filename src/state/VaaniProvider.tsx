@@ -3,7 +3,7 @@ import { PermissionsAndroid, Platform } from 'react-native';
 import { SentenceChunker } from '../tts/chunker';
 import { SpeechQueue, speakTestLines } from '../tts/engine';
 import { warmupSherpa } from '../tts/sherpa';
-import { ensureStt, warmupStt } from '../stt/whisper';
+import { ensureStt } from '../stt/whisper';
 import { startListening } from '../audio/recorder';
 import { runAgent } from '../llm/agent';
 import { warmProvider } from '../llm/stream';
@@ -82,10 +82,9 @@ export function VaaniProvider(props: { children: ReactNode }) {
       setReady(true);
       const key = await loadApiKey(loaded.provider);
       warmProvider(providerConfig(loaded, key)).catch(() => undefined);
-      if (local[loaded.sttModelId] && local['silero-vad']) {
-        ensureStt(local, loaded.sttModelId)
-          .then(() => warmupStt())
-          .catch(() => undefined);
+      const sttId = local['whisper-base-q5'] ? 'whisper-base-q5' : loaded.sttModelId;
+      if (local[sttId] && local['silero-vad']) {
+        ensureStt(local, sttId).catch(() => undefined);
       }
       warmupSherpa(local).catch(() => undefined);
     })();
@@ -247,12 +246,18 @@ export function VaaniProvider(props: { children: ReactNode }) {
     }
     setError('');
     cancelTurn();
-    await ensureStt(models, current.sttModelId);
+    const sttModelId = models['whisper-base-q5'] ? 'whisper-base-q5' : current.sttModelId;
+    if (sttModelId !== current.sttModelId) {
+      const next = { ...current, sttModelId };
+      settingsRef.current = next;
+      setSettings(next);
+    }
+    await ensureStt(models, sttModelId);
     let speechEnd = performance.now();
     setPhase('listening');
     const session = await startListening({
       lang: current.lang,
-      sttModelId: current.sttModelId,
+      sttModelId,
       vadSilenceMs: current.vadSilenceMs,
       handlers: {
         onLevel: setLevel,
@@ -280,12 +285,25 @@ export function VaaniProvider(props: { children: ReactNode }) {
       const session = listenRef.current;
       listenRef.current = null;
       setPhase('transcribing');
+      const pendingId = `${Date.now()}-hearing`;
+      setBubbles((prev) => [...prev, { id: pendingId, role: 'user', text: 'Hearing you' }]);
       const speechEnd = performance.now();
-      const text = await session.stop();
-      if (text) await handleUtterance(text, speechEnd, performance.now());
-      else setPhase('idle');
+      try {
+        const text = await session.stop();
+        setBubbles((prev) => prev.filter((bubble) => bubble.id !== pendingId));
+        if (text) await handleUtterance(text, speechEnd, performance.now());
+        else {
+          setError('No speech was heard. Tap to talk and try again.');
+          setPhase('idle');
+        }
+      } catch (err) {
+        setBubbles((prev) => prev.filter((bubble) => bubble.id !== pendingId));
+        setError(err instanceof Error ? err.message : 'Could not transcribe that');
+        setPhase('idle');
+      }
       return;
     }
+    if (phase === 'transcribing') return;
     if (phase === 'speaking' || phase === 'thinking') {
       cancelTurn();
       setPhase('idle');
